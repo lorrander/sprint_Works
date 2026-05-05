@@ -1,0 +1,1 @@
+psql -U postgres -d sprintworks -c "\dt"

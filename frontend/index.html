@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprint Works — Dashboard</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="logo">
+    <div class="logo-text">Sprint<span>Works</span></div>
+    <div class="logo-sub">v1.0 — dashboard</div>
+  </div>
+  <a class="nav-item active" href="dashboard.html">
+    <span class="nav-icon">📊</span> Dashboard
+  </a>
+  <a class="nav-item" href="dashboard.html#estoque" onclick="showPage('estoque')">
+    <span class="nav-icon">📦</span> Estoque
+  </a>
+  <a class="nav-item" href="dashboard.html#vendedores" onclick="showPage('vendedores')">
+    <span class="nav-icon">🏆</span> Vendedores
+  </a>
+  <a class="nav-item" href="dashboard.html#relatorio" onclick="showPage('relatorio')">
+    <span class="nav-icon">📈</span> Relatório
+  </a>
+  <div class="nav-divider"></div>
+  <a class="nav-item" href="chat.html">
+    <span class="nav-icon">🤖</span> IA Chat
+  </a>
+</nav>
+
+<main class="main">
+
+  <!-- DASHBOARD -->
+  <div id="page-dashboard" class="page active">
+    <div class="page-header">
+      <div class="page-title">Dash<span>board</span></div>
+      <div class="badge" id="data-hoje"></div>
+    </div>
+    <div class="cards-grid">
+      <div class="card">
+        <div class="card-icon">💰</div>
+        <div class="card-label">Receita Hoje</div>
+        <div class="card-value green" id="receita-hoje">—</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🛒</div>
+        <div class="card-label">Vendas Hoje</div>
+        <div class="card-value purple" id="vendas-hoje">—</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">📦</div>
+        <div class="card-label">Produtos</div>
+        <div class="card-value teal" id="total-produtos">—</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">⚠️</div>
+        <div class="card-label">Estoque Baixo</div>
+        <div class="card-value pink" id="estoque-baixo">—</div>
+      </div>
+    </div>
+    <div class="two-cols">
+      <div class="table-container">
+        <div class="table-header">🏆 Ranking Vendedores</div>
+        <table>
+          <thead><tr><th>#</th><th>Vendedor</th><th>Vendas</th><th>Receita</th></tr></thead>
+          <tbody id="tabela-ranking"></tbody>
+        </table>
+      </div>
+      <div class="table-container">
+        <div class="table-header">⚠️ Estoque Crítico</div>
+        <table>
+          <thead><tr><th>Produto</th><th>Estoque</th><th>Status</th></tr></thead>
+          <tbody id="tabela-estoque-critico"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ESTOQUE -->
+  <div id="page-estoque" class="page">
+    <div class="page-header">
+      <div class="page-title">Es<span>toque</span></div>
+      <div class="badge">Todos os produtos</div>
+    </div>
+    <div class="table-container">
+      <div class="table-header">📦 Produtos em Estoque</div>
+      <table>
+        <thead><tr><th>Produto</th><th>Preço</th><th>Custo</th><th>Estoque</th><th>Status</th></tr></thead>
+        <tbody id="tabela-estoque"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- VENDEDORES -->
+  <div id="page-vendedores" class="page">
+    <div class="page-header">
+      <div class="page-title">Vende<span>dores</span></div>
+      <div class="badge">Metas do mês</div>
+    </div>
+    <div class="table-container">
+      <div class="table-header">🎯 Desempenho vs Meta</div>
+      <table>
+        <thead><tr><th>Vendedor</th><th>Meta</th><th>Vendido</th><th>Progresso</th><th>Status</th></tr></thead>
+        <tbody id="tabela-metas"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- RELATÓRIO -->
+  <div id="page-relatorio" class="page">
+    <div class="page-header">
+      <div class="page-title">Rela<span>tório</span></div>
+    </div>
+    <div class="relatorio-form">
+      <div class="form-group">
+        <label class="form-label">Data Início</label>
+        <input type="date" class="form-input" id="data-inicio">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Data Fim</label>
+        <input type="date" class="form-input" id="data-fim">
+      </div>
+      <button class="btn-primary" onclick="gerarRelatorio()">Gerar Relatório</button>
+    </div>
+    <div id="relatorio-resultado"></div>
+  </div>
+
+</main>
+
+<script>
+const API = 'http://127.0.0.1:8000';
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (name === 'estoque') carregarEstoque();
+  if (name === 'vendedores') carregarMetas();
+}
+
+function formatBRL(val) {
+  if (!val) return 'R$ 0,00';
+  return 'R$ ' + parseFloat(val).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+}
+
+function getStatusEstoque(qtd) {
+  if (qtd <= 10) return ['critical', '🔴 Crítico'];
+  if (qtd <= 25) return ['low', '🟡 Baixo'];
+  return ['ok', '🟢 OK'];
+}
+
+async function carregarDashboard() {
+  document.getElementById('data-hoje').textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
+
+  try {
+    const res = await fetch(API + '/vendas-hoje');
+    const data = await res.json();
+    document.getElementById('vendas-hoje').textContent = data.total_vendas || 0;
+    document.getElementById('receita-hoje').textContent = formatBRL(data.receita_hoje);
+  } catch(e) {}
+
+  try {
+    const res = await fetch(API + '/produtos');
+    const data = await res.json();
+    document.getElementById('total-produtos').textContent = data.length;
+  } catch(e) {}
+
+  try {
+    const res = await fetch(API + '/estoque-alerta?minimo=25');
+    const data = await res.json();
+    const qtd = data.produtos ? data.produtos.length : 0;
+    document.getElementById('estoque-baixo').textContent = qtd;
+    const tbody = document.getElementById('tabela-estoque-critico');
+    if (data.produtos && data.produtos.length > 0) {
+      tbody.innerHTML = data.produtos.map(p => {
+        const [cls, label] = getStatusEstoque(p.estoque);
+        return `<tr><td>${p.produto}</td><td><strong>${p.estoque}</strong></td><td><span class="estoque-badge ${cls}">${label}</span></td></tr>`;
+      }).join('');
+    } else {
+      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:24px">✅ Estoque OK</td></tr>';
+    }
+  } catch(e) {}
+
+  try {
+    const res = await fetch(API + '/ranking-vendedores');
+    const data = await res.json();
+    document.getElementById('tabela-ranking').innerHTML = data.map((v, i) => `
+      <tr>
+        <td style="color:var(--muted);font-family:'DM Mono',monospace">${i + 1}</td>
+        <td><strong>${v.vendedor}</strong></td>
+        <td style="font-family:'DM Mono',monospace">${v.total_vendas}</td>
+        <td style="color:var(--success)">${formatBRL(v.receita_total)}</td>
+      </tr>`).join('');
+  } catch(e) {}
+}
+
+async function carregarEstoque() {
+  try {
+    const res = await fetch(API + '/produtos');
+    const data = await res.json();
+    document.getElementById('tabela-estoque').innerHTML = data.map(p => {
+      const [cls, label] = getStatusEstoque(p[4]);
+      return `<tr>
+        <td><strong>${p[1]}</strong></td>
+        <td style="color:var(--accent)">${formatBRL(p[2])}</td>
+        <td style="color:var(--muted)">${formatBRL(p[3])}</td>
+        <td style="font-family:'DM Mono',monospace;font-weight:600">${p[4]}</td>
+        <td><span class="estoque-badge ${cls}">${label}</span></td>
+      </tr>`;
+    }).join('');
+  } catch(e) {}
+}
+
+async function carregarMetas() {
+  try {
+    const res = await fetch(API + '/metas-desempenho');
+    const data = await res.json();
+    const tbody = document.getElementById('tabela-metas');
+    if (!data.desempenho || data.desempenho.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Nenhuma meta cadastrada</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.desempenho.map(v => {
+      const pct = parseFloat(v.percentual);
+      const barClass = pct >= 100 ? 'success' : pct >= 60 ? 'warning' : 'danger';
+      return `<tr>
+        <td><strong>${v.vendedor}</strong></td>
+        <td style="color:var(--muted)">${formatBRL(v.meta)}</td>
+        <td style="color:var(--success)">${formatBRL(v.vendido)}</td>
+        <td style="min-width:120px">
+          <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:4px">${v.percentual}</div>
+          <div class="progress-bar"><div class="progress-fill ${barClass}" style="width:${Math.min(pct,100)}%"></div></div>
+        </td>
+        <td>${v.status}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) {}
+}
+
+async function gerarRelatorio() {
+  const inicio = document.getElementById('data-inicio').value;
+  const fim = document.getElementById('data-fim').value;
+  const div = document.getElementById('relatorio-resultado');
+  if (!inicio || !fim) {
+    div.innerHTML = '<div class="empty"><div class="empty-icon">📅</div>Selecione as datas</div>';
+    return;
+  }
+  div.innerHTML = '<div class="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div> Gerando...</div>';
+  try {
+    const res = await fetch(`${API}/relatorio?data_inicio=${inicio}&data_fim=${fim}`);
+    const data = await res.json();
+    div.innerHTML = `
+      <div class="cards-grid" style="margin-bottom:24px">
+        <div class="card"><div class="card-icon">🛒</div><div class="card-label">Total Vendas</div><div class="card-value purple">${data.totais.total_vendas}</div></div>
+        <div class="card"><div class="card-icon">💰</div><div class="card-label">Receita Total</div><div class="card-value green">${formatBRL(data.totais.receita_total)}</div></div>
+      </div>
+      <div class="two-cols">
+        <div class="table-container">
+          <div class="table-header">📦 Por Produto</div>
+          <table><thead><tr><th>Produto</th><th>Qtd</th><th>Valor</th></tr></thead>
+          <tbody>${data.por_produto.map(p => `<tr><td><strong>${p.produto}</strong></td><td style="font-family:'DM Mono',monospace">${p.quantidade}</td><td style="color:var(--success)">${formatBRL(p.valor)}</td></tr>`).join('')}</tbody></table>
+        </div>
+        <div class="table-container">
+          <div class="table-header">👤 Por Vendedor</div>
+          <table><thead><tr><th>Vendedor</th><th>Vendas</th><th>Receita</th></tr></thead>
+          <tbody>${data.por_vendedor.map(v => `<tr><td><strong>${v.vendedor}</strong></td><td style="font-family:'DM Mono',monospace">${v.total_vendas}</td><td style="color:var(--success)">${formatBRL(v.receita)}</td></tr>`).join('')}</tbody></table>
+        </div>
+      </div>`;
+  } catch(e) {
+    div.innerHTML = '<div class="empty"><div class="empty-icon">❌</div>Erro ao gerar relatório</div>';
+  }
+}
+
+// datas padrão
+const hoje = new Date().toISOString().split('T')[0];
+const mesPassado = new Date(Date.now() - 30*24*60*60*1000).toISOString().split('T')[0];
+document.getElementById('data-inicio').value = mesPassado;
+document.getElementById('data-fim').value = hoje;
+
+carregarDashboard();
+</script>
+</body>
+</html>

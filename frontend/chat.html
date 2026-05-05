@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprint Works — IA Chat</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="logo">
+    <div class="logo-text">Sprint<span>Works</span></div>
+    <div class="logo-sub">v1.0 — ia chat</div>
+  </div>
+  <a class="nav-item" href="dashboard.html">
+    <span class="nav-icon">📊</span> Dashboard
+  </a>
+  <div class="nav-divider"></div>
+  <a class="nav-item active" href="chat.html">
+    <span class="nav-icon">🤖</span> IA Chat
+  </a>
+</nav>
+
+<main class="main">
+  <div class="page-header">
+    <div class="page-title">IA <span>Chat</span></div>
+    <div class="badge">Gemini 2.5 Flash</div>
+  </div>
+
+  <div class="chat-container">
+    <div class="chat-messages" id="chat-messages">
+      <div class="msg ai">
+        <div class="msg-avatar">🤖</div>
+        <div class="msg-bubble">Olá! Sou o assistente de vendas da <strong>Sprint Works</strong>. Tenho acesso aos dados de vendas, estoque, metas e vendedores em tempo real. Pode me perguntar qualquer coisa!</div>
+      </div>
+    </div>
+
+    <div class="quick-questions">
+      <span style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;align-self:center">Perguntas rápidas →</span>
+      <button class="quick-btn" onclick="perguntaRapida('Qual vendedor vendeu mais?')">🏆 Melhor vendedor</button>
+      <button class="quick-btn" onclick="perguntaRapida('Quais produtos estão com estoque baixo?')">📦 Estoque baixo</button>
+      <button class="quick-btn" onclick="perguntaRapida('Quanto faturamos esse mês?')">💰 Faturamento</button>
+      <button class="quick-btn" onclick="perguntaRapida('Quem está mais perto de bater a meta?')">🎯 Metas</button>
+      <button class="quick-btn" onclick="perguntaRapida('Quais são os produtos mais vendidos?')">📊 Top produtos</button>
+      <button class="quick-btn" onclick="perguntaRapida('Faça um resumo geral das vendas')">📋 Resumo geral</button>
+    </div>
+
+    <div class="chat-input-area">
+      <input
+        type="text"
+        class="chat-input"
+        id="chat-input"
+        placeholder="Faça uma pergunta sobre vendas, estoque, metas..."
+        onkeydown="if(event.key==='Enter') enviarPergunta()"
+      >
+      <button class="chat-send" id="btn-enviar" onclick="enviarPergunta()">Enviar →</button>
+    </div>
+  </div>
+</main>
+
+<script>
+const API = 'http://127.0.0.1:8000';
+
+function perguntaRapida(texto) {
+  document.getElementById('chat-input').value = texto;
+  enviarPergunta();
+}
+
+async function enviarPergunta() {
+  const input = document.getElementById('chat-input');
+  const pergunta = input.value.trim();
+  if (!pergunta) return;
+
+  const messages = document.getElementById('chat-messages');
+  const btn = document.getElementById('btn-enviar');
+
+  messages.innerHTML += `
+    <div class="msg user">
+      <div class="msg-avatar">👤</div>
+      <div class="msg-bubble">${pergunta}</div>
+    </div>`;
+
+  input.value = '';
+  btn.disabled = true;
+
+  const loadingId = 'loading-' + Date.now();
+  messages.innerHTML += `
+    <div class="msg ai" id="${loadingId}">
+      <div class="msg-avatar">🤖</div>
+      <div class="msg-bubble">
+        <div class="loading">
+          <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+          Consultando dados...
+        </div>
+      </div>
+    </div>`;
+
+  messages.scrollTop = messages.scrollHeight;
+
+  try {
+    const res = await fetch(`${API}/perguntar-ia?pergunta=${encodeURIComponent(pergunta)}`);
+    const data = await res.json();
+
+    document.getElementById(loadingId).remove();
+
+    messages.innerHTML += `
+      <div class="msg ai">
+        <div class="msg-avatar">🤖</div>
+        <div class="msg-bubble">${data.resposta}</div>
+      </div>`;
+  } catch(e) {
+    document.getElementById(loadingId).remove();
+    messages.innerHTML += `
+      <div class="msg ai">
+        <div class="msg-avatar">🤖</div>
+        <div class="msg-bubble" style="color:var(--danger)">❌ Erro ao conectar com a API. Verifique se o servidor está rodando em http://127.0.0.1:8000</div>
+      </div>`;
+  }
+
+  btn.disabled = false;
+  messages.scrollTop = messages.scrollHeight;
+}
+</script>
+</body>
+</html>
