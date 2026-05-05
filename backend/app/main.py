@@ -282,7 +282,7 @@ def perguntar_ia(pergunta: str):
     def chamar_ia():
         try:
             r = client.models.generate_content(
-                model="gemini-2.5-flash",
+                model="gemini-2.0-flash",
                 contents=contexto
             )
             resposta["texto"] = r.text
@@ -355,7 +355,7 @@ def ia_vendas():
     def chamar_ia():
         try:
             r = client.models.generate_content(
-                model="gemini-2.5-flash",
+                model="gemini-2.0-flash",
                 contents=texto
             )
             resposta["texto"] = r.text

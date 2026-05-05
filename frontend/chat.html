@@ -4,18 +4,117 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sprint Works — IA Chat</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="sytle.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  .chart-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    padding: 8px 14px;
+    background: rgba(124,108,252,0.15);
+    border: 1px solid rgba(124,108,252,0.4);
+    border-radius: 8px;
+    color: var(--accent);
+    font-size: 12px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .chart-btn:hover { background: rgba(124,108,252,0.25); transform: translateY(-1px); }
+
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    width: 90%;
+    max-width: 600px;
+    position: relative;
+    animation: fadeUp 0.3s ease;
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 16px; right: 16px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--muted);
+    font-size: 16px;
+    cursor: pointer;
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .modal-close:hover { color: var(--text); border-color: var(--accent); }
+
+  .modal-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    letter-spacing: -0.5px;
+  }
+  .modal-title span { color: var(--accent); }
+
+  .chart-tipos {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .chart-tipo-btn {
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 11px;
+    font-family: 'Syne', sans-serif;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .chart-tipo-btn.active,
+  .chart-tipo-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(124,108,252,0.08);
+  }
+</style>
 </head>
 <body>
 
-<!-- SIDEBAR -->
 <nav class="sidebar">
   <div class="logo">
     <div class="logo-text">Sprint<span>Works</span></div>
     <div class="logo-sub">v1.0 — ia chat</div>
   </div>
-  <a class="nav-item" href="dashboard.html">
+  <a class="nav-item" href="index.html">
     <span class="nav-icon">📊</span> Dashboard
+  </a>
+  <a class="nav-item" href="index.html" onclick="sessionStorage.setItem('page','estoque')">
+    <span class="nav-icon">📦</span> Estoque
+  </a>
+  <a class="nav-item" href="index.html" onclick="sessionStorage.setItem('page','vendedores')">
+    <span class="nav-icon">🏆</span> Vendedores
+  </a>
+  <a class="nav-item" href="index.html" onclick="sessionStorage.setItem('page','relatorio')">
+    <span class="nav-icon">📈</span> Relatório
   </a>
   <div class="nav-divider"></div>
   <a class="nav-item active" href="chat.html">
@@ -26,46 +125,190 @@
 <main class="main">
   <div class="page-header">
     <div class="page-title">IA <span>Chat</span></div>
-    <div class="badge">Gemini 2.5 Flash</div>
   </div>
 
   <div class="chat-container">
     <div class="chat-messages" id="chat-messages">
       <div class="msg ai">
         <div class="msg-avatar">🤖</div>
-        <div class="msg-bubble">Olá! Sou o assistente de vendas da <strong>Sprint Works</strong>. Tenho acesso aos dados de vendas, estoque, metas e vendedores em tempo real. Pode me perguntar qualquer coisa!</div>
+        <div class="msg-bubble">Olá! Sou o assistente de vendas da <strong>Sprint Works</strong>. Posso responder perguntas e também <strong>gerar gráficos</strong> dos dados. Pode me perguntar qualquer coisa!</div>
       </div>
     </div>
 
     <div class="quick-questions">
-      <span style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;align-self:center">Perguntas rápidas →</span>
-      <button class="quick-btn" onclick="perguntaRapida('Qual vendedor vendeu mais?')">🏆 Melhor vendedor</button>
-      <button class="quick-btn" onclick="perguntaRapida('Quais produtos estão com estoque baixo?')">📦 Estoque baixo</button>
+      <span style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;align-self:center">Rápidas →</span>
+      <button class="quick-btn" onclick="perguntaRapida('Quais produtos mais vendidos?')">📊 Top produtos</button>
+      <button class="quick-btn" onclick="perguntaRapida('Qual vendedor vendeu mais?')">🏆 Vendedores</button>
+      <button class="quick-btn" onclick="perguntaRapida('Quais produtos estão com estoque baixo?')">📦 Estoque</button>
       <button class="quick-btn" onclick="perguntaRapida('Quanto faturamos esse mês?')">💰 Faturamento</button>
       <button class="quick-btn" onclick="perguntaRapida('Quem está mais perto de bater a meta?')">🎯 Metas</button>
-      <button class="quick-btn" onclick="perguntaRapida('Quais são os produtos mais vendidos?')">📊 Top produtos</button>
-      <button class="quick-btn" onclick="perguntaRapida('Faça um resumo geral das vendas')">📋 Resumo geral</button>
+      <button class="quick-btn" onclick="perguntaRapida('Faça um resumo geral das vendas')">📋 Resumo</button>
     </div>
 
     <div class="chat-input-area">
-      <input
-        type="text"
-        class="chat-input"
-        id="chat-input"
+      <input type="text" class="chat-input" id="chat-input"
         placeholder="Faça uma pergunta sobre vendas, estoque, metas..."
-        onkeydown="if(event.key==='Enter') enviarPergunta()"
-      >
+        onkeydown="if(event.key==='Enter') enviarPergunta()">
       <button class="chat-send" id="btn-enviar" onclick="enviarPergunta()">Enviar →</button>
     </div>
   </div>
 </main>
 
+<!-- MODAL GRÁFICO -->
+<div class="modal-overlay" id="modal-grafico">
+  <div class="modal">
+    <button class="modal-close" onclick="fecharModal()">✕</button>
+    <div class="modal-title" id="modal-titulo">Grá<span>fico</span></div>
+    <div class="chart-tipos">
+      <button class="chart-tipo-btn active" onclick="trocarTipo('bar', this)">📊 Barras</button>
+      <button class="chart-tipo-btn" onclick="trocarTipo('pie', this)">🥧 Pizza</button>
+      <button class="chart-tipo-btn" onclick="trocarTipo('doughnut', this)">🍩 Rosca</button>
+      <button class="chart-tipo-btn" onclick="trocarTipo('line', this)">📈 Linha</button>
+    </div>
+    <canvas id="chart-canvas" height="280"></canvas>
+  </div>
+</div>
+
 <script>
 const API = 'http://127.0.0.1:8000';
+let chartInstance = null;
+let dadosGraficoAtual = null;
 
 function perguntaRapida(texto) {
   document.getElementById('chat-input').value = texto;
   enviarPergunta();
+}
+
+function detectarTipoGrafico(pergunta) {
+  const p = pergunta.toLowerCase();
+  if (p.includes('produto') || p.includes('mais vendido')) return 'produtos';
+  if (p.includes('vendedor') || p.includes('ranking')) return 'vendedores';
+  if (p.includes('estoque')) return 'estoque';
+  if (p.includes('meta')) return 'metas';
+  return null;
+}
+
+async function buscarDadosGrafico(tipo) {
+  try {
+    if (tipo === 'produtos') {
+      const hoje = new Date().toISOString().split('T')[0];
+      const res = await fetch(`${API}/relatorio?data_inicio=2020-01-01&data_fim=${hoje}`);
+      const rel = await res.json();
+      return {
+        labels: rel.por_produto.map(p => p.produto),
+        values: rel.por_produto.map(p => parseFloat(p.quantidade)),
+        titulo: 'Produtos Mais Vendidos',
+        cor: ['#7c6cfc','#fc6c8f','#6cfcd4','#fbbf24','#4ade80']
+      };
+    }
+    if (tipo === 'vendedores') {
+      const res = await fetch(API + '/ranking-vendedores');
+      const data = await res.json();
+      return {
+        labels: data.map(v => v.vendedor),
+        values: data.map(v => parseFloat(v.receita_total)),
+        titulo: 'Receita por Vendedor (R$)',
+        cor: ['#7c6cfc','#fc6c8f','#6cfcd4','#fbbf24','#4ade80']
+      };
+    }
+    if (tipo === 'estoque') {
+      const res = await fetch(API + '/estoque');
+      const data = await res.json();
+      return {
+        labels: data.map(p => p.produto),
+        values: data.map(p => p.estoque),
+        titulo: 'Estoque por Produto',
+        cor: data.map(p => p.estoque <= 10 ? '#f87171' : p.estoque <= 25 ? '#fbbf24' : '#4ade80')
+      };
+    }
+    if (tipo === 'metas') {
+      const res = await fetch(API + '/metas-desempenho');
+      const data = await res.json();
+      return {
+        labels: data.desempenho.map(v => v.vendedor),
+        values: data.desempenho.map(v => parseFloat(v.vendido)),
+        values2: data.desempenho.map(v => v.meta),
+        titulo: 'Vendido vs Meta',
+        cor: ['#7c6cfc','#fc6c8f','#6cfcd4']
+      };
+    }
+  } catch(e) { return null; }
+}
+
+async function abrirGrafico(tipo) {
+  const dados = await buscarDadosGrafico(tipo);
+  if (!dados) return;
+  dadosGraficoAtual = { ...dados, tipo };
+  document.getElementById('modal-titulo').innerHTML = `Grá<span style="color:var(--accent)">fico</span> — ${dados.titulo}`;
+  document.querySelectorAll('.chart-tipo-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('.chart-tipo-btn').classList.add('active');
+  document.getElementById('modal-grafico').classList.add('open');
+  renderizarGrafico('bar', dados);
+}
+
+function fecharModal() {
+  document.getElementById('modal-grafico').classList.remove('open');
+  if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+}
+
+function trocarTipo(tipo, btn) {
+  document.querySelectorAll('.chart-tipo-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (dadosGraficoAtual) renderizarGrafico(tipo, dadosGraficoAtual);
+}
+
+function renderizarGrafico(tipo, dados) {
+  if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+  const ctx = document.getElementById('chart-canvas').getContext('2d');
+
+  const datasets = [{
+    label: dados.titulo,
+    data: dados.values,
+    backgroundColor: dados.cor,
+    borderColor: tipo === 'line' ? '#7c6cfc' : 'transparent',
+    borderWidth: tipo === 'line' ? 2 : 0,
+    tension: 0.4,
+    fill: tipo === 'line',
+    pointBackgroundColor: '#7c6cfc',
+    pointRadius: tipo === 'line' ? 4 : 0,
+  }];
+
+  if (dados.values2) {
+    datasets.push({
+      label: 'Meta',
+      data: dados.values2,
+      backgroundColor: 'rgba(252,108,143,0.6)',
+      borderColor: 'transparent',
+      borderWidth: 0,
+    });
+  }
+
+  chartInstance = new Chart(ctx, {
+    type: tipo,
+    data: { labels: dados.labels, datasets },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          display: tipo === 'pie' || tipo === 'doughnut' || !!dados.values2,
+          labels: { color: '#e8e8f0', font: { family: 'Syne' }, padding: 16 }
+        },
+        tooltip: {
+          backgroundColor: '#1a1a26',
+          borderColor: '#2a2a3d',
+          borderWidth: 1,
+          titleColor: '#e8e8f0',
+          bodyColor: '#6b6b8a',
+          titleFont: { family: 'Syne', weight: '700' },
+          bodyFont: { family: 'DM Mono' },
+        }
+      },
+      scales: tipo === 'bar' || tipo === 'line' ? {
+        x: { ticks: { color: '#6b6b8a', font: { family: 'DM Mono', size: 11 } }, grid: { color: 'rgba(42,42,61,0.5)' } },
+        y: { ticks: { color: '#6b6b8a', font: { family: 'DM Mono', size: 11 } }, grid: { color: 'rgba(42,42,61,0.5)' } }
+      } : {}
+    }
+  });
 }
 
 async function enviarPergunta() {
@@ -75,6 +318,7 @@ async function enviarPergunta() {
 
   const messages = document.getElementById('chat-messages');
   const btn = document.getElementById('btn-enviar');
+  const tipoGrafico = detectarTipoGrafico(pergunta);
 
   messages.innerHTML += `
     <div class="msg user">
@@ -102,26 +346,41 @@ async function enviarPergunta() {
   try {
     const res = await fetch(`${API}/perguntar-ia?pergunta=${encodeURIComponent(pergunta)}`);
     const data = await res.json();
-
     document.getElementById(loadingId).remove();
+
+    // só mostra botão de gráfico se não tiver erro na resposta
+    const temErro = data.resposta.includes('503') ||
+                    data.resposta.includes('429') ||
+                    data.resposta.includes('Erro ao') ||
+                    data.resposta.includes('UNAVAILABLE') ||
+                    data.resposta.includes('EXHAUSTED');
+
+    const btnGrafico = (tipoGrafico && !temErro) ? `
+      <br><button class="chart-btn" onclick="abrirGrafico('${tipoGrafico}')">
+        📊 Ver como gráfico
+      </button>` : '';
 
     messages.innerHTML += `
       <div class="msg ai">
         <div class="msg-avatar">🤖</div>
-        <div class="msg-bubble">${data.resposta}</div>
+        <div class="msg-bubble">${data.resposta}${btnGrafico}</div>
       </div>`;
   } catch(e) {
     document.getElementById(loadingId).remove();
     messages.innerHTML += `
       <div class="msg ai">
         <div class="msg-avatar">🤖</div>
-        <div class="msg-bubble" style="color:var(--danger)">❌ Erro ao conectar com a API. Verifique se o servidor está rodando em http://127.0.0.1:8000</div>
+        <div class="msg-bubble" style="color:var(--danger)">❌ Erro ao conectar com a API. Verifique se o servidor está rodando.</div>
       </div>`;
   }
 
   btn.disabled = false;
   messages.scrollTop = messages.scrollHeight;
 }
+
+document.getElementById('modal-grafico').addEventListener('click', function(e) {
+  if (e.target === this) fecharModal();
+});
 </script>
 </body>
 </html>
